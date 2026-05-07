@@ -1,0 +1,1 @@
+export const MONGODB_NAME = 'abhinav_07';
