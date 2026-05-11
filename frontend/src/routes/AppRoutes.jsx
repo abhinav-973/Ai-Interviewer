@@ -5,6 +5,7 @@ import Login from "../pages/Login";
 import Register from "../pages/Register";
 import Preview from "../pages/Preview";
 import Dashboard from "../pages/Dashboard";
+import ForgotPassword from "../pages/ForgotPassword";
 const AppRoutes = () => {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
@@ -31,6 +32,29 @@ const AppRoutes = () => {
           !isAuthenticated ? <Register /> : <Navigate to="/dashboard" replace />
         }
       />
+
+      <Route
+        path="/forgot-password"
+        element={
+          !isAuthenticated ? (
+            <ForgotPassword />
+          ) : (
+            <Navigate to="/dashboard" replace />
+          )
+        }
+      />
+
+      <Route
+        path="/reset-password/:resetToken"
+        element={
+          !isAuthenticated ? (
+            <ForgotPassword />
+          ) : (
+            <Navigate to="/dashboard" replace />
+          )
+        }
+      />
+
       {/* Protected Routes */}
       <Route
         path="/dashboard"

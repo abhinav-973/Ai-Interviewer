@@ -3,6 +3,48 @@ import { User } from "../models/user.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import nodemailer from "nodemailer";
+
+const hashValue = (value) =>
+  crypto.createHash("sha256").update(value).digest("hex");
+
+const generateOtp = () => crypto.randomInt(100000, 1000000).toString();
+
+const sendPasswordResetOtp = async (email, otp) => {
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } = process.env;
+
+  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`Password reset OTP for ${email}: ${otp}`);
+      return;
+    }
+
+    throw new ApiError(500, "Email service is not configured");
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: Number(SMTP_PORT),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS,
+    },
+  });
+
+  await transporter.sendMail({
+    from: SMTP_FROM || SMTP_USER,
+    to: email,
+    subject: "Your AI Interview password reset OTP",
+    text: `Your password reset OTP is ${otp}. It expires in 10 minutes.`,
+    html: `
+      <p>Your password reset OTP is:</p>
+      <h2>${otp}</h2>
+      <p>This OTP expires in 10 minutes.</p>
+    `,
+  });
+};
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -188,6 +230,10 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 const changePassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
 
+  if (!oldPassword || !newPassword) {
+    throw new ApiError(400, "Old password and new password are required");
+  }
+
   const user = await User.findById(req.user._id);
 
   const isOldPasswordCorrect = await user.isPasswordCorrect(oldPassword);
@@ -197,11 +243,155 @@ const changePassword = asyncHandler(async (req, res) => {
   }
 
   user.password = newPassword;
-  await user.save({ validateBeforeSave: false });
+  await user.save();
 
   return res
     .status(200)
     .json(new ApiResponse(200, {}, "Password changed successfully"));
+});
+
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const resetMessage =
+    "If an account exists, a 6 digit OTP has been sent";
+
+  if (!email || email.trim() === "") {
+    throw new ApiError(400, "Email is required");
+  }
+
+  const user = await User.findOne({ email: email.trim().toLowerCase() });
+
+  if (!user) {
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, resetMessage));
+  }
+
+  const otp = generateOtp();
+
+  user.passwordResetOtp = hashValue(otp);
+  user.passwordResetOtpExpires = new Date(Date.now() + 10 * 60 * 1000);
+  user.passwordResetOtpAttempts = 0;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+
+  await user.save({ validateBeforeSave: false });
+
+  try {
+    await sendPasswordResetOtp(user.email, otp);
+  } catch (error) {
+    user.passwordResetOtp = undefined;
+    user.passwordResetOtpExpires = undefined;
+    user.passwordResetOtpAttempts = 0;
+    await user.save({ validateBeforeSave: false });
+
+    throw new ApiError(500, "Could not send OTP email. Please try again.");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, resetMessage));
+});
+
+const verifyResetOtp = asyncHandler(async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    throw new ApiError(400, "Email and OTP are required");
+  }
+
+  if (!/^\d{6}$/.test(otp)) {
+    throw new ApiError(400, "OTP must be 6 digits");
+  }
+
+  const user = await User.findOne({
+    email: email.trim().toLowerCase(),
+  }).select(
+    "+passwordResetOtp +passwordResetOtpExpires +passwordResetOtpAttempts",
+  );
+
+  if (
+    !user ||
+    !user.passwordResetOtp ||
+    !user.passwordResetOtpExpires ||
+    user.passwordResetOtpExpires < new Date()
+  ) {
+    throw new ApiError(400, "OTP is invalid or has expired");
+  }
+
+  if (user.passwordResetOtpAttempts >= 5) {
+    user.passwordResetOtp = undefined;
+    user.passwordResetOtpExpires = undefined;
+    user.passwordResetOtpAttempts = 0;
+    await user.save({ validateBeforeSave: false });
+
+    throw new ApiError(400, "Too many invalid OTP attempts. Request a new OTP.");
+  }
+
+  if (user.passwordResetOtp !== hashValue(otp)) {
+    user.passwordResetOtpAttempts += 1;
+    await user.save({ validateBeforeSave: false });
+
+    throw new ApiError(400, "Invalid OTP");
+  }
+
+  const resetToken = crypto.randomBytes(32).toString("hex");
+
+  user.passwordResetOtp = undefined;
+  user.passwordResetOtpExpires = undefined;
+  user.passwordResetOtpAttempts = 0;
+  user.passwordResetToken = hashValue(resetToken);
+  user.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+  await user.save({ validateBeforeSave: false });
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      { resetToken },
+      "OTP verified. You can reset your password now.",
+    ),
+  );
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+  const { resetToken } = req.params;
+  const { newPassword, confirmPassword } = req.body;
+
+  if (!resetToken) {
+    throw new ApiError(400, "Reset token is required");
+  }
+
+  if (!newPassword || !confirmPassword) {
+    throw new ApiError(400, "New password and confirm password are required");
+  }
+
+  if (newPassword !== confirmPassword) {
+    throw new ApiError(400, "Passwords do not match");
+  }
+
+  const user = await User.findOne({
+    passwordResetToken: hashValue(resetToken),
+    passwordResetExpires: { $gt: new Date() },
+  }).select("+passwordResetToken +passwordResetExpires +refreshToken");
+
+  if (!user) {
+    throw new ApiError(400, "Reset token is invalid or has expired");
+  }
+
+  user.password = newPassword;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+  user.passwordResetOtp = undefined;
+  user.passwordResetOtpExpires = undefined;
+  user.passwordResetOtpAttempts = 0;
+  user.refreshToken = undefined;
+
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password reset successfully"));
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
@@ -210,4 +400,14 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, req.user, "Current user fetched successfully"));
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken, changePassword, getCurrentUser };
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changePassword,
+  forgotPassword,
+  verifyResetOtp,
+  resetPassword,
+  getCurrentUser,
+};

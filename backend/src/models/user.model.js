@@ -67,6 +67,32 @@ const userSchema = new Schema(
       default: "",
       select: false,
     },
+
+    passwordResetToken: {
+      type: String,
+      select: false,
+    },
+
+    passwordResetExpires: {
+      type: Date,
+      select: false,
+    },
+
+    passwordResetOtp: {
+      type: String,
+      select: false,
+    },
+
+    passwordResetOtpExpires: {
+      type: Date,
+      select: false,
+    },
+
+    passwordResetOtpAttempts: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
   },
   {
     timestamps: true,
