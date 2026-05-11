@@ -20,7 +20,7 @@ const generateAccessAndRefreshTokens = async (userId) => {
 
 const registerUser = asyncHandler(async (req, res) => {
   // get user details from frontend
-  const { fullName, email, password } = req.body;
+  const { fullName, email, password, targetRole, experienceLevel } = req.body;
 
   // validation
   if (
@@ -41,6 +41,8 @@ const registerUser = asyncHandler(async (req, res) => {
     fullName,
     email,
     password,
+    targetRole,
+    experienceLevel,
   });
 
   // remove sensitive fields
@@ -147,7 +149,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       process.env.REFRESH_TOKEN_SECRET,
     );
 
-    const user = await User.findById(decodedToken?.userId);
+    const user = await User.findById(decodedToken?.userId).select(
+      "+refreshToken",
+    );
 
     if (!user) {
       throw new ApiError(404, "Invalid refresh token");
@@ -162,7 +166,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       secure: true,
     };
 
-    const { accessToken, newRefreshToken } =
+    const { accessToken, refreshToken: newRefreshToken } =
       await generateAccessAndRefreshTokens(user._id);
 
     return res
