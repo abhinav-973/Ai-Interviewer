@@ -1,43 +1,56 @@
-import { LogOut } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useSelector } from "react-redux";
 
-import { logoutAsync } from "../features/auth/authSlice";
+import DashboardHeader from "../components/dashboard/DashboardHeader";
+import ResumeUploadCard from "../components/dashboard/ResumeUploadCard";
+import DashboardHero from "../components/dashboard/DashboardHero";
+import StatsCards from "../components/dashboard/StatsCards";
+import ReturningUserSection from "../components/dashboard/ReturningUserSection";
 
 const Dashboard = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const user = useSelector((state) => state.auth.user);
-  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const user = useSelector(
+    (state) => state.auth.user
+  );
 
-  const handleLogout = async () => {
-    const result = await dispatch(logoutAsync());
-    if (logoutAsync.fulfilled.match(result)) {
-      navigate("/login", { replace: true });
-    }
-  };
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
+        Loading...
+      </div>
+    );
+  }
+
+  const hasPreviousInterviews =
+    user.interviewsTaken > 0;
 
   return (
-    <div className="min-h-screen bg-slate-950 px-6 py-8 text-white">
-      <div className="mx-auto flex max-w-6xl items-center justify-between">
-        <div>
-          <p className="text-sm font-medium uppercase text-blue-400">
-            Dashboard
-          </p>
-          <h1 className="mt-2 text-3xl font-bold">
-            Hello, {user?.fullName || "Guest"}!
-          </h1>
-        </div>
+    <div className="min-h-screen overflow-hidden bg-slate-950 text-white">
+      {/* background glow */}
+      <div className="absolute left-0 top-0 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl" />
 
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-2 font-medium text-slate-100 transition hover:border-red-500/70 hover:bg-red-500/10 hover:text-red-200"
-        >
-          <LogOut className="h-5 w-5" />
-          Logout
-        </button>
+      <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" />
+
+      <div className="relative z-10">
+        <DashboardHeader
+          user={user}
+          hasPreviousInterviews={
+            hasPreviousInterviews
+          }
+        />
+
+        <div className="mx-auto mt-10 max-w-7xl px-6 pb-10">
+          {!hasPreviousInterviews ? (
+            <div className="grid gap-8 lg:grid-cols-2">
+              <ResumeUploadCard />
+              <DashboardHero />
+            </div>
+          ) : (
+            <div className="space-y-8">
+              <StatsCards user={user} />
+
+              <ReturningUserSection />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

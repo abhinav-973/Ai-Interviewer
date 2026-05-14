@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import SmartParser from "pdf-parse-new/lib/SmartPDFParser.js";
 import mammoth from "mammoth";
+import { aiSkillExtractor } from "../utils/aiSkillExtractor.js";
 
 export const uploadResume = asyncHandler(async (req, res) => {
 
@@ -35,13 +36,14 @@ export const uploadResume = asyncHandler(async (req, res) => {
     extractedText = result.value;
   }
 
-  console.log(extractedText);
+  const skills = await aiSkillExtractor(extractedText);;
 
   return res.status(200).json(
     new ApiResponse(
       200,
       {
         filename: file.originalname,
+        skills,
         extractedText,
       },
       "Resume uploaded successfully"
