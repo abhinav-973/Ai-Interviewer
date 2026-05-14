@@ -8,7 +8,7 @@ import { logoutAsync } from "../features/auth/authSlice";
 const Dashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const token = useSelector((state) => state.auth.token);
+  const user = useSelector((state) => state.auth.user);
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
   const handleLogout = async () => {
@@ -25,7 +25,9 @@ const Dashboard = () => {
           <p className="text-sm font-medium uppercase text-blue-400">
             Dashboard
           </p>
-          <h1 className="mt-2 text-3xl font-bold">Welcome to the Dashboard!</h1>
+          <h1 className="mt-2 text-3xl font-bold">
+            Hello, {user?.fullName || "Guest"}!
+          </h1>
         </div>
 
         <button
