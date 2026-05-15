@@ -43,13 +43,6 @@ const interviewSchema = new Schema(
       trim: true,
     },
 
-    // Interview level
-    difficulty: {
-      type: String,
-      enum: ["Easy", "Medium", "Hard"],
-      default: "Easy",
-    },
-
     // Tech stack / skills
     techStack: [
       {
@@ -61,7 +54,6 @@ const interviewSchema = new Schema(
     // Total interview score
     score: {
       type: Number,
-      required: true,
       min: 0,
       max: 100,
     },
@@ -75,7 +67,6 @@ const interviewSchema = new Schema(
     // Overall interview feedback
     feedback: {
       type: String,
-      required: true,
     },
 
     // Strengths detected by AI
@@ -110,6 +101,9 @@ const interviewSchema = new Schema(
   },
   {
     timestamps: true,
+  },
+  {
+    strict: "throw",
   },
 );
 

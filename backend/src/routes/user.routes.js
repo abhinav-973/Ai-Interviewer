@@ -13,6 +13,7 @@ import { uploadResume } from "../controllers/upload.controller.js";
 import upload from "../middlewares/upload.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import multer from "multer"
+import { createInterview } from "../controllers/interview.controller.js";
 
 const userRouter = Router();
 const mult = multer();
@@ -28,5 +29,6 @@ userRouter.route("/logout").post(verifyJWT, logoutUser);
 userRouter.route("/change-password").patch(verifyJWT, changePassword);
 userRouter.route("/refresh-token").post(refreshAccessToken);
 userRouter.route("/upload-resume").post(verifyJWT, upload.single("resume"), uploadResume);
+userRouter.route("/create-interview").post(verifyJWT, createInterview)
 
 export default userRouter;

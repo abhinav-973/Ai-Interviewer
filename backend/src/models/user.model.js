@@ -96,6 +96,9 @@ const userSchema = new Schema(
   {
     timestamps: true,
   },
+  {
+    strict: "throw",
+  },
 );
 
 userSchema.pre("save", async function () {
