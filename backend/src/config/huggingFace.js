@@ -1,4 +1,7 @@
-import { InferenceClient } from "@huggingface/inference";
+import { InferenceClient }
+  from "@huggingface/inference";
 
 export const client =
-  new InferenceClient(process.env.HF_API_KEY);
+  new InferenceClient(
+    process.env.HF_TOKEN
+  );

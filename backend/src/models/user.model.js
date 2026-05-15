@@ -56,7 +56,6 @@ const userSchema = new Schema(
       type: Number,
       default: 0,
     },
-
     averageScore: {
       type: Number,
       default: 0,

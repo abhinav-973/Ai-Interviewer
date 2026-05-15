@@ -26,7 +26,7 @@ export const uploadResume = asyncHandler(async (req, res) => {
   // DOCX parsing
   else if (
     file.mimetype ===
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    "application/pdf"
   ) {
 
     const result = await mammoth.extractRawText({
