@@ -10,6 +10,11 @@ const hashValue = (value) =>
   crypto.createHash("sha256").update(value).digest("hex");
 
 const generateOtp = () => crypto.randomInt(100000, 1000000).toString();
+const getTokenCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+});
 
 const sendPasswordResetOtp = async (email, otp) => {
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } = process.env;
@@ -137,10 +142,7 @@ const loginUser = asyncHandler(async (req, res) => {
   delete loggedinUser.password;
   delete loggedinUser.refreshToken;
 
-  const options = {
-    httpOnly: true,
-    secure: true,
-  };
+  const options = getTokenCookieOptions();
 
   return res
     .status(200)
@@ -165,10 +167,7 @@ const logoutUser = asyncHandler(async (req, res) => {
       new: true,
     },
   );
-  const options = {
-    httpOnly: true,
-    secure: true,
-  };
+  const options = getTokenCookieOptions();
   return res
     .status(200)
     .clearCookie("accessToken", options)
@@ -203,10 +202,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       throw new ApiError(401, "Refresh token does not match");
     }
 
-    const options = {
-      httpOnly: true,
-      secure: true,
-    };
+    const options = getTokenCookieOptions();
 
     const { accessToken, refreshToken: newRefreshToken } =
       await generateAccessAndRefreshTokens(user._id);

@@ -9,7 +9,7 @@ const questionSchema = new Schema(
 
     answer: {
       type: String,
-      required: true,
+      default: "",
     },
 
     score: {
@@ -24,7 +24,6 @@ const questionSchema = new Schema(
       default: "",
     },
   },
-  { _id: false },
 );
 
 const interviewSchema = new Schema(
@@ -67,16 +66,17 @@ const interviewSchema = new Schema(
     // Overall interview feedback
     feedback: {
       type: String,
+      default: "",
     },
 
-    // Strengths detected by AI
+    // Strengths detected by mock evaluation
     strengths: [
       {
         type: String,
       },
     ],
 
-    // Weaknesses detected by AI
+    // Weaknesses detected by mock evaluation
     weaknesses: [
       {
         type: String,
@@ -96,13 +96,11 @@ const interviewSchema = new Schema(
     status: {
       type: String,
       enum: ["Pending", "Completed"],
-      default: "Completed",
+      default: "Pending",
     },
   },
   {
     timestamps: true,
-  },
-  {
     strict: "throw",
   },
 );

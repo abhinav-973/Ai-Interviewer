@@ -24,10 +24,16 @@ const LoginPage = () => {
 
     // simulate API request
     try {
-      const response = await axios.post("/api/v1/users/login", {
-        email,
-        password,
-      });
+      const response = await axios.post(
+        "/api/v1/users/login",
+        {
+          email,
+          password,
+        },
+        {
+          withCredentials: true,
+        },
+      );
 
       const { user, accessToken } = response.data.data;
 

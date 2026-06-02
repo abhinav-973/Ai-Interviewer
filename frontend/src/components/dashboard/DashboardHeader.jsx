@@ -23,6 +23,9 @@ const DashboardHeader = ({
       });
     }
   };
+  
+  console.log("DashboardHeader rendered with user:", user);
+  console.log("hasPreviousInterviews:", hasPreviousInterviews);
 
   return (
     <div className="px-6 py-8">

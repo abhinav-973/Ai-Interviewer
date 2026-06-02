@@ -6,7 +6,6 @@ import mammoth from "mammoth";
 import { aiSkillExtractor } from "../utils/aiSkillExtractor.js";
 
 export const uploadResume = asyncHandler(async (req, res) => {
-
   const file = req.file;
 
   if (!file) {
@@ -26,9 +25,8 @@ export const uploadResume = asyncHandler(async (req, res) => {
   // DOCX parsing
   else if (
     file.mimetype ===
-    "application/pdf"
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
   ) {
-
     const result = await mammoth.extractRawText({
       buffer: file.buffer,
     });
@@ -36,7 +34,12 @@ export const uploadResume = asyncHandler(async (req, res) => {
     extractedText = result.value;
   }
 
-  const skills = await aiSkillExtractor(extractedText);;
+  const skills = await aiSkillExtractor(extractedText);
+  req.user.skills = skills;
+  req.user.resumeUrl = file.originalname;
+
+  await req.user.save();
+  console.log("Extracted Skills:", skills);
 
   return res.status(200).json(
     new ApiResponse(
@@ -45,8 +48,20 @@ export const uploadResume = asyncHandler(async (req, res) => {
         filename: file.originalname,
         skills,
         extractedText,
+        user: {
+          _id: req.user._id,
+          fullName: req.user.fullName,
+          email: req.user.email,
+          role: req.user.role,
+          resumeUrl: req.user.resumeUrl,
+          skills: req.user.skills,
+          targetRole: req.user.targetRole,
+          experienceLevel: req.user.experienceLevel,
+          interviewsTaken: req.user.interviewsTaken,
+          averageScore: req.user.averageScore,
+        },
       },
-      "Resume uploaded successfully"
-    )
+      "Resume uploaded successfully",
+    ),
   );
 });

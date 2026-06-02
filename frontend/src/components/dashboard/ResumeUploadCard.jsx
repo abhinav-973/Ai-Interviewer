@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import axios from "axios";
+import apiClient from "../../services/apiClient";
 import {
   AlertCircle,
   CheckCircle2,
@@ -7,7 +7,9 @@ import {
   LoaderCircle,
   Plus,
 } from "lucide-react";
-import { useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
+
+import { updateUserProfile } from "../../features/auth/authSlice";
 
 const MAX_RESUME_SIZE = 5 * 1024 * 1024;
 const ALLOWED_RESUME_EXTENSIONS = [".pdf", ".docx"];
@@ -19,7 +21,7 @@ const getUploadErrorMessage = (error) =>
 
 const ResumeUploadCard = () => {
   const fileInputRef = useRef(null);
-  const token = useSelector((state) => state.auth.token);
+  const dispatch = useDispatch();
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -49,15 +51,6 @@ const ResumeUploadCard = () => {
   };
 
   const uploadResume = async (file) => {
-    const activeToken =
-      token ||
-      (typeof window !== "undefined" ? localStorage.getItem("token") : "");
-
-    if (!activeToken) {
-      setErrorMessage("Please sign in again before uploading your resume.");
-      return;
-    }
-
     const formData = new FormData();
     formData.append("resume", file);
 
@@ -66,20 +59,18 @@ const ResumeUploadCard = () => {
     setSuccessMessage("");
 
     try {
-      const response = await axios.post(
+      const response = await apiClient.post(
         "/api/v1/users/upload-resume",
         formData,
-        {
-          headers: {
-            Authorization: `Bearer ${activeToken}`,
-          },
-          withCredentials: true,
-        },
       );
 
       setSuccessMessage(
         response.data?.message || "Resume uploaded and analyzed successfully.",
       );
+
+      if (response.data?.data?.user) {
+        dispatch(updateUserProfile(response.data.data.user));
+      }
     } catch (error) {
       setErrorMessage(getUploadErrorMessage(error));
     } finally {

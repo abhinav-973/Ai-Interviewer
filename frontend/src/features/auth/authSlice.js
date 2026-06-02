@@ -1,8 +1,9 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import apiClient from "../../services/apiClient";
 
 const initialState = {
-  user: null,
+  user: JSON.parse(localStorage.getItem("user")) || null,
+
   token: localStorage.getItem("token") || null,
   isAuthenticated: !!localStorage.getItem("token"),
   loading: false,
@@ -12,25 +13,13 @@ const initialState = {
 // Async thunk for logout
 export const logoutAsync = createAsyncThunk(
   "auth/logout",
-  async (_, { getState, rejectWithValue }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      const state = getState();
-      const token = state.auth.token;
-
-      await axios.post(
-        "/api/v1/users/logout",
-        {},
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          withCredentials: true,
-        },
-      );
+      await apiClient.post("/api/v1/users/logout");
 
       return null;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data || "Logout failed"
-      );
+      return rejectWithValue(error.response?.data || "Logout failed");
     }
   },
 );
@@ -47,6 +36,7 @@ const authSlice = createSlice({
       state.error = null;
 
       localStorage.setItem("token", action.payload.token);
+      localStorage.setItem("user", JSON.stringify(action.payload.user));
     },
 
     logout: (state) => {
@@ -56,6 +46,24 @@ const authSlice = createSlice({
       state.error = null;
 
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    },
+
+    refreshAccessTokenSuccess: (state, action) => {
+      state.token = action.payload;
+      state.isAuthenticated = true;
+      state.error = null;
+
+      localStorage.setItem("token", action.payload);
+    },
+
+    updateUserProfile: (state, action) => {
+      state.user = {
+        ...state.user,
+        ...action.payload,
+      };
+
+      localStorage.setItem("user", JSON.stringify(state.user));
     },
   },
 
@@ -73,6 +81,7 @@ const authSlice = createSlice({
         state.error = null;
 
         localStorage.removeItem("token");
+        localStorage.removeItem("user");
       })
       .addCase(logoutAsync.rejected, (state, action) => {
         state.loading = false;
@@ -82,10 +91,17 @@ const authSlice = createSlice({
         state.token = null;
         state.isAuthenticated = false;
         localStorage.removeItem("token");
+        localStorage.removeItem("user");
       });
   },
 });
 
-export const { loginSuccess, logout } = authSlice.actions;
+export const {
+  loginSuccess,
+  logout,
+  refreshAccessTokenSuccess,
+  updateUserProfile,
+} =
+  authSlice.actions;
 
 export default authSlice.reducer;

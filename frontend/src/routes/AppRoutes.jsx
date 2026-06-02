@@ -1,3 +1,4 @@
+import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 // auth pages
@@ -6,6 +7,8 @@ import Register from "../pages/Register";
 import Preview from "../pages/Preview";
 import Dashboard from "../pages/Dashboard";
 import ForgotPassword from "../pages/ForgotPassword";
+import InterviewPage from "../pages/InterviewPage";
+import InterviewResults from "../pages/InterviewResults";
 const AppRoutes = () => {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
@@ -59,6 +62,24 @@ const AppRoutes = () => {
         path="/dashboard"
         element={
           isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />
+        }
+      />
+
+      <Route
+        path="/interviews/:interviewId"
+        element={
+          isAuthenticated ? <InterviewPage /> : <Navigate to="/login" replace />
+        }
+      />
+
+      <Route
+        path="/interviews/:interviewId/results"
+        element={
+          isAuthenticated ? (
+            <InterviewResults />
+          ) : (
+            <Navigate to="/login" replace />
+          )
         }
       />
     </Routes>
