@@ -37,6 +37,7 @@ export const uploadResume = asyncHandler(async (req, res) => {
   const skills = await aiSkillExtractor(extractedText);
   req.user.skills = skills;
   req.user.resumeUrl = file.originalname;
+  req.user.resumeText = extractedText;
 
   await req.user.save();
   console.log("Extracted Skills:", skills);
@@ -54,6 +55,7 @@ export const uploadResume = asyncHandler(async (req, res) => {
           email: req.user.email,
           role: req.user.role,
           resumeUrl: req.user.resumeUrl,
+          resumeText: req.user.resumeText,
           skills: req.user.skills,
           targetRole: req.user.targetRole,
           experienceLevel: req.user.experienceLevel,

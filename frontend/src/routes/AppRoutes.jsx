@@ -9,6 +9,7 @@ import Dashboard from "../pages/Dashboard";
 import ForgotPassword from "../pages/ForgotPassword";
 import InterviewPage from "../pages/InterviewPage";
 import InterviewResults from "../pages/InterviewResults";
+import Reports from "../pages/Reports";
 const AppRoutes = () => {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
@@ -69,6 +70,13 @@ const AppRoutes = () => {
         path="/interviews/:interviewId"
         element={
           isAuthenticated ? <InterviewPage /> : <Navigate to="/login" replace />
+        }
+      />
+
+      <Route
+        path="/reports"
+        element={
+          isAuthenticated ? <Reports /> : <Navigate to="/login" replace />
         }
       />
 

@@ -2,6 +2,7 @@ import React from "react";
 import {
   AlertCircle,
   CheckCircle2,
+  FileText,
   Loader2,
   PlayCircle,
 } from "lucide-react";
@@ -11,6 +12,7 @@ const ReturningUserSection = ({
   errorMessage,
   isCreating,
   onStartInterview,
+  onViewReports,
   skills = [],
   title = "Continue Your AI Interview Journey",
   description = "Upload an updated resume or start a new interview session to improve your performance even further.",
@@ -62,8 +64,10 @@ const ReturningUserSection = ({
 
         <button
           type="button"
+          onClick={onViewReports}
           className="rounded-2xl border border-slate-700 bg-slate-900 px-6 py-3 font-semibold transition hover:border-blue-500"
         >
+          <FileText className="mr-2 inline h-5 w-5" />
           View Reports
         </button>
       </div>

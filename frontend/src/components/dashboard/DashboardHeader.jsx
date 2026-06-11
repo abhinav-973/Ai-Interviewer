@@ -1,17 +1,23 @@
-import { LogOut, Upload } from "lucide-react";
+import { useRef } from "react";
+import { LogOut, Upload, LoaderCircle } from "lucide-react";
 
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
 import { logoutAsync } from "../../features/auth/authSlice";
+import { useResumeUpload } from "../../services/useResumeUpload.js";
 
 const DashboardHeader = ({
   user,
   hasPreviousInterviews,
 }) => {
   const dispatch = useDispatch();
-
   const navigate = useNavigate();
+
+  const fileInputRef = useRef(null);
+
+  const { uploadResume, isUploading } =
+    useResumeUpload();
 
   const handleLogout = async () => {
     const result =
@@ -23,9 +29,24 @@ const DashboardHeader = ({
       });
     }
   };
-  
-  console.log("DashboardHeader rendered with user:", user);
-  console.log("hasPreviousInterviews:", hasPreviousInterviews);
+
+  const openFilePicker = () => {
+    if (!isUploading) {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleResumeChange = async (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    await uploadResume(file);
+
+    event.target.value = "";
+  };
 
   return (
     <div className="px-6 py-8">
@@ -45,10 +66,32 @@ const DashboardHeader = ({
         </div>
 
         <div className="flex items-center gap-4">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="hidden"
+            onChange={handleResumeChange}
+          />
+
           {hasPreviousInterviews && (
-            <button className="inline-flex items-center gap-2 rounded-2xl bg-blue-500 px-5 py-3 font-semibold transition hover:bg-blue-400">
-              <Upload className="h-5 w-5" />
-              Upload Resume
+            <button
+              type="button"
+              onClick={openFilePicker}
+              disabled={isUploading}
+              className="inline-flex items-center gap-2 rounded-2xl bg-blue-500 px-5 py-3 font-semibold transition hover:bg-blue-400 disabled:opacity-70"
+            >
+              {isUploading ? (
+                <>
+                  <LoaderCircle className="h-5 w-5 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-5 w-5" />
+                  Upload Resume
+                </>
+              )}
             </button>
           )}
 

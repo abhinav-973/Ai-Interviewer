@@ -16,6 +16,7 @@ import multer from "multer";
 import {
   createInterview,
   getInterviewById,
+  getInterviewReports,
   submitInterview,
 } from "../controllers/interview.controller.js";
 
@@ -36,7 +37,10 @@ userRouter
   .route("/upload-resume")
   .post(verifyJWT, upload.single("resume"), uploadResume);
 userRouter.route("/create-interview").post(verifyJWT, createInterview);
-userRouter.route("/interviews").post(verifyJWT, createInterview);
+userRouter
+  .route("/interviews")
+  .get(verifyJWT, getInterviewReports)
+  .post(verifyJWT, createInterview);
 userRouter.route("/interviews/:interviewId").get(verifyJWT, getInterviewById);
 userRouter
   .route("/interviews/:interviewId/submit")

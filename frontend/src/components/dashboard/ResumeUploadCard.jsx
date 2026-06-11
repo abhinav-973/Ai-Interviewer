@@ -1,5 +1,4 @@
 import React, { useRef, useState } from "react";
-import apiClient from "../../services/apiClient";
 import {
   AlertCircle,
   CheckCircle2,
@@ -7,74 +6,25 @@ import {
   LoaderCircle,
   Plus,
 } from "lucide-react";
-import { useDispatch } from "react-redux";
 
-import { updateUserProfile } from "../../features/auth/authSlice";
-
-const MAX_RESUME_SIZE = 5 * 1024 * 1024;
-const ALLOWED_RESUME_EXTENSIONS = [".pdf", ".docx"];
-
-const getUploadErrorMessage = (error) =>
-  error.response?.data?.message ||
-  error.message ||
-  "Could not upload resume. Please try again.";
+import { useResumeUpload } from "../../services/useResumeUpload.js";
 
 const ResumeUploadCard = () => {
   const fileInputRef = useRef(null);
-  const dispatch = useDispatch();
-  const [isUploading, setIsUploading] = useState(false);
+
   const [selectedFileName, setSelectedFileName] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+
+  const {
+    uploadResume,
+    isUploading,
+    successMessage,
+    errorMessage,
+    clearMessages,
+  } = useResumeUpload();
 
   const openFilePicker = () => {
     if (!isUploading) {
       fileInputRef.current?.click();
-    }
-  };
-
-  const validateResume = (file) => {
-    const fileName = file.name.toLowerCase();
-    const hasAllowedExtension = ALLOWED_RESUME_EXTENSIONS.some((extension) =>
-      fileName.endsWith(extension),
-    );
-
-    if (!hasAllowedExtension) {
-      return "Only PDF and DOCX resumes are supported.";
-    }
-
-    if (file.size > MAX_RESUME_SIZE) {
-      return "Resume must be smaller than 5MB.";
-    }
-
-    return "";
-  };
-
-  const uploadResume = async (file) => {
-    const formData = new FormData();
-    formData.append("resume", file);
-
-    setIsUploading(true);
-    setErrorMessage("");
-    setSuccessMessage("");
-
-    try {
-      const response = await apiClient.post(
-        "/api/v1/users/upload-resume",
-        formData,
-      );
-
-      setSuccessMessage(
-        response.data?.message || "Resume uploaded and analyzed successfully.",
-      );
-
-      if (response.data?.data?.user) {
-        dispatch(updateUserProfile(response.data.data.user));
-      }
-    } catch (error) {
-      setErrorMessage(getUploadErrorMessage(error));
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -86,18 +36,11 @@ const ResumeUploadCard = () => {
     }
 
     setSelectedFileName(file.name);
-    setSuccessMessage("");
-    setErrorMessage("");
 
-    const validationMessage = validateResume(file);
-
-    if (validationMessage) {
-      setErrorMessage(validationMessage);
-      event.target.value = "";
-      return;
-    }
+    clearMessages();
 
     await uploadResume(file);
+
     event.target.value = "";
   };
 

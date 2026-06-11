@@ -51,6 +51,10 @@ const Dashboard = () => {
     }
   };
 
+  const handleViewReports = () => {
+    navigate("/reports");
+  };
+
   return (
     <div className="min-h-screen overflow-hidden bg-slate-950 text-white">
       {/* background glow */}
@@ -80,6 +84,7 @@ const Dashboard = () => {
                 errorMessage={interviewError}
                 isCreating={creating}
                 onStartInterview={handleStartInterview}
+                onViewReports={handleViewReports}
                 skills={skills}
                 title="Start Your First Interview"
               />
@@ -93,6 +98,7 @@ const Dashboard = () => {
                 errorMessage={interviewError}
                 isCreating={creating}
                 onStartInterview={handleStartInterview}
+                onViewReports={handleViewReports}
                 skills={skills}
               />
             </div>

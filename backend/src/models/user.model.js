@@ -35,6 +35,11 @@ const userSchema = new Schema(
       default: "",
     },
 
+    resumeText: {
+      type: String,
+      default: "",
+    },
+
     skills: [
       {
         type: String,

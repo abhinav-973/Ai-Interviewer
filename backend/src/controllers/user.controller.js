@@ -164,7 +164,7 @@ const logoutUser = asyncHandler(async (req, res) => {
       $set: { refreshToken: undefined },
     },
     {
-      new: true,
+      returnDocument: "after",
     },
   );
   const options = getTokenCookieOptions();
