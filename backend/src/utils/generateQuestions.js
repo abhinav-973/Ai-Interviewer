@@ -1,124 +1,85 @@
 import axios from "axios";
 
-const parseJsonResponse = (content = "") => {
-  const text = String(content).trim();
-  const fencedJson = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-
-  if (fencedJson?.[1]) {
-    return JSON.parse(fencedJson[1]);
-  }
-
+export const generateQuestions = async (skills = []) => {
   try {
-    return JSON.parse(text);
-  } catch {
-    const objectStart = text.indexOf("{");
-    const objectEnd = text.lastIndexOf("}");
-    const arrayStart = text.indexOf("[");
-    const arrayEnd = text.lastIndexOf("]");
+    const { data } = await axios.post("http://127.0.0.1:11434/api/chat", {
+      model: "llama3:latest",
+      messages: [
+        {
+          role: "system",
+          content: `
+You are a senior software engineer and technical interviewer.
 
-    if (objectStart !== -1 && objectEnd > objectStart) {
-      return JSON.parse(text.slice(objectStart, objectEnd + 1));
-    }
+Your task is to generate interview questions based on:
 
-    if (arrayStart !== -1 && arrayEnd > arrayStart) {
-      return JSON.parse(text.slice(arrayStart, arrayEnd + 1));
-    }
+1. Candidate skills
+2. Technologies used
+3. Project descriptions
+4. Project features and architecture
 
-    throw new Error("Ollama did not return valid JSON");
-  }
-};
+Rules:
 
-const extractQuestionText = (question) => {
-  if (typeof question === "string") {
-    return question;
-  }
+* Generate exactly 6 questions.
+* Focus on technologies and projects actually mentioned.
+* Ask practical, scenario-based, and conceptual questions.
+* Include both beginner and intermediate-level questions.
+* Prioritize project-related questions over generic theory.
+* Do not ask duplicate questions.
+* If a project uses a specific technology, ask how it was implemented in that project.
+* Return ONLY valid JSON.
+* Do not include explanations or markdown.
 
-  if (question && typeof question === "object") {
-    return question.question || question.text || question.title || "";
-  }
+Output Format:
 
-  return "";
-};
+{
+"questions": [
+{
+"question": "",
+"category": "Project | Technology | Concept",
+"difficulty": "Beginner | Intermediate"
+}
+]
+}
 
-const normalizeQuestions = (response) => {
-  const questions = Array.isArray(response) ? response : response?.questions;
+Examples:
 
-  if (!Array.isArray(questions)) {
-    return [];
-  }
+{
+"questions": [
+{
+"question": "Explain how you implemented JWT authentication in your project.",
+"category": "Project",
+"difficulty": "Intermediate"
+},
+{
+"question": "What is the Virtual DOM in React and why is it useful?",
+"category": "Technology",
+"difficulty": "Beginner"
+}
+]
+}
 
-  return questions
-    .map(extractQuestionText)
-    .map((question) => String(question || "").trim())
-    .filter(Boolean)
-    .map((question) => ({
+Candidate Data:
+{{CANDIDATE_DATA}}
+`,
+        },
+        {
+          role: "user",
+          content: `Skills: ${skills.join(", ")}`,
+        },
+      ],
+      stream: false,
+    });
+
+    const questions = JSON.parse(data.message.content);
+
+    return questions.map((question) => ({
       question,
       answer: "",
       score: 0,
       feedback: "",
     }));
-};
-
-export const generateQuestions = async (skills = [], resumeText = "") => {
-  const ollamaUrl = process.env.OLLAMA_URL;
-  const ollamaModel = process.env.OLLAMA_MODEL;
-
-  if (!ollamaUrl || !ollamaModel) {
-    throw new Error("OLLAMA_URL and OLLAMA_MODEL must be configured");
-  }
-
-  try {
-    const { data } = await axios.post(
-      ollamaUrl,
-      {
-        model: ollamaModel,
-        messages: [
-          {
-            role: "system",
-            content: `
-You are a senior technical interviewer.
-
-Generate 6 interview questions based on the candidate's skills and resume.
-
-Return ONLY valid JSON in this exact shape:
-{
-  "questions": []
-}
-
-Rules:
-- Focus on practical and conceptual questions.
-- Mix beginner and intermediate level questions.
-- Prefer questions that match the candidate's actual project and resume context.
-- Put only question strings inside the questions array.
-- Do not include markdown or explanations.
-
-Example:
-{
-  "questions": [
-    "Explain React Virtual DOM.",
-    "How does JWT authentication work?"
-  ]
-}
-            `,
-          },
-          {
-            role: "user",
-            content: JSON.stringify({
-              skills,
-              resumeText,
-            }),
-          },
-        ],
-        format: "json",
-        stream: false,
-      },
-      {
-        timeout: 120000,
-      },
-    );
-
-    return normalizeQuestions(parseJsonResponse(data?.message?.content));
   } catch (error) {
-    throw new Error(`Question generation failed: ${error.message}`);
+    console.error("Question generation failed:", error.message);
+    return [];
   }
 };
