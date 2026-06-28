@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   Loader2,
   Send,
+  Mic,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
@@ -24,13 +25,12 @@ const InterviewPage = () => {
   const startedAtRef = useRef(Date.now());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
+  const [isListening, setIsListening] = useState(false);
+  const currentQuestionKeyRef = useRef("");
 
-  const {
-    currentInterview,
-    error,
-    loading,
-    submitting,
-  } = useSelector((state) => state.interview);
+  const { currentInterview, error, loading, submitting } = useSelector(
+    (state) => state.interview,
+  );
 
   const questions = useMemo(
     () => currentInterview?.questions || [],
@@ -46,9 +46,64 @@ const InterviewPage = () => {
     return answers[key]?.trim();
   }).length;
 
+  //speechRecognition
+  const recognitionRef = useRef(null);
+
+  useEffect(() => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("Speech Recognition is not supported in this browser.");
+      return;
+    }
+
+    recognitionRef.current = new SpeechRecognition();
+
+    recognitionRef.current.continuous = false;
+    recognitionRef.current.interimResults = true;
+    recognitionRef.current.lang = "en-US";
+
+    recognitionRef.current.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognitionRef.current.onend = () => {
+      setIsListening(false);
+    };
+
+    recognitionRef.current.onerror = (event) => {
+      console.error(event);
+      setIsListening(false);
+    };
+
+    recognitionRef.current.onresult = (event) => {
+      let transcript = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+
+      setAnswers((prev) => ({
+        ...prev,
+        [currentQuestionKeyRef.current]: transcript,
+      }));
+    };
+  }, []);
+
+  useEffect(() => {
+    currentQuestionKeyRef.current = currentQuestionKey;
+  }, [currentQuestionKey]);
+
   useEffect(() => {
     dispatch(fetchInterviewByIdAsync(interviewId));
   }, [dispatch, interviewId]);
+
+  useEffect(() => {
+    if (currentQuestion?.question) {
+      speakQuestion(currentQuestion.question);
+    }
+  }, [currentIndex, currentQuestion]);
 
   useEffect(() => {
     if (!currentInterview?._id) {
@@ -70,6 +125,26 @@ const InterviewPage = () => {
       ...previousAnswers,
       [currentQuestionKey]: event.target.value,
     }));
+  };
+
+  const startListening = () => {
+    recognitionRef.current?.start();
+  };
+
+  const speakQuestion = (question) => {
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(question);
+
+    utterance.lang = "en-US";
+    utterance.rate = 1;
+    utterance.pitch = 1;
+
+    utterance.onend = () => {
+      recognitionRef.current?.start();
+    };
+
+    window.speechSynthesis.speak(utterance);
   };
 
   const handleSubmit = async () => {
@@ -201,6 +276,15 @@ const InterviewPage = () => {
               placeholder="Write your answer here..."
               className="mt-6 min-h-64 w-full resize-none rounded-2xl border border-slate-700 bg-slate-900 px-4 py-4 leading-relaxed text-white outline-none transition placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
             />
+            <button
+              type="button"
+              onClick={startListening}
+              className="mt-4 flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2"
+            >
+              <Mic size={18} />
+
+              {isListening ? "Listening..." : "Speak Answer"}
+            </button>
           </div>
 
           {error?.message && (

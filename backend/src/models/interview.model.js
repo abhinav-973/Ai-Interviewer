@@ -23,6 +23,14 @@ const questionSchema = new Schema(
       type: String,
       default: "",
     },
+    strength: {
+      type:  String,
+      default: "",
+    },
+    improvement: {
+      type: String,
+      default: "",
+    },
   },
 );
 

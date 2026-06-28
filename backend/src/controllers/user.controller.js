@@ -10,11 +10,16 @@ const hashValue = (value) =>
   crypto.createHash("sha256").update(value).digest("hex");
 
 const generateOtp = () => crypto.randomInt(100000, 1000000).toString();
-const getTokenCookieOptions = () => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-});
+const getTokenCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  };
+};
 
 const sendPasswordResetOtp = async (email, otp) => {
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } = process.env;

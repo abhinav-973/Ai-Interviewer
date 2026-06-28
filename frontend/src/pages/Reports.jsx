@@ -126,7 +126,9 @@ const Reports = () => {
                 <BarChart3 className="h-4 w-4" />
                 <span className="text-sm">Average</span>
               </div>
-              <p className={`mt-2 text-3xl font-bold ${getScoreColor(averageScore)}`}>
+              <p
+                className={`mt-2 text-3xl font-bold ${getScoreColor(averageScore)}`}
+              >
                 {averageScore}%
               </p>
             </div>
@@ -172,7 +174,9 @@ const Reports = () => {
                   <h2 className="mt-2 text-2xl font-bold">{report.role}</h2>
                 </div>
 
-                <div className={`text-4xl font-bold ${getScoreColor(report.score || 0)}`}>
+                <div
+                  className={`text-4xl font-bold ${getScoreColor(report.score || 0)}`}
+                >
                   {report.score || 0}%
                 </div>
               </div>
@@ -180,6 +184,43 @@ const Reports = () => {
               <p className="mt-4 line-clamp-2 text-sm leading-relaxed text-slate-400">
                 {report.feedback || "No feedback summary available."}
               </p>
+              {report.strengths?.length > 0 && (
+                <div className="mt-4">
+                  <p className="mb-2 text-xs font-semibold uppercase text-emerald-400">
+                    Strengths
+                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    {report.strengths.slice(0, 3).map((strength, index) => (
+                      <span
+                        key={index}
+                        className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300"
+                      >
+                        {strength}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {report.weaknesses?.length > 0 && (
+                <div className="mt-3">
+                  <p className="mb-2 text-xs font-semibold uppercase text-red-400">
+                    Areas to Improve
+                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    {report.weaknesses.slice(0, 3).map((weakness, index) => (
+                      <span
+                        key={index}
+                        className="rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 text-xs text-red-300"
+                      >
+                        {weakness}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="mt-5 flex flex-wrap gap-2">
                 {(report.techStack || []).slice(0, 5).map((skill) => (
@@ -215,4 +256,3 @@ const Reports = () => {
 };
 
 export default Reports;
-

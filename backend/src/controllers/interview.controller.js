@@ -2,15 +2,19 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import Interview from "../models/interview.model.js";
-import {
-  evaluateAnswer,
-  generateQuestions,
-} from "../utils/generateQuestions.js";
+import { generateQuestions } from "../utils/generateQuestions.js";
+import aiInterviewAnalyser from "../utils/aiInterviewAnalyser.js";
 
 const normalizeTechStack = (techStack = []) =>
-  techStack
-    .map((skill) => String(skill || "").trim())
-    .filter(Boolean);
+  techStack.map((skill) => String(skill || "").trim()).filter(Boolean);
+
+const normalizeProjects = (projects = []) =>
+  projects.map((project) => ({
+    name: project.name,
+    description: project.description,
+    technologies: project.technologies || [],
+    keyFeatures: project.keyFeatures || [],
+  }));
 
 const findUserInterview = async (interviewId, userId) => {
   const interview = await Interview.findById(interviewId);
@@ -24,46 +28,6 @@ const findUserInterview = async (interviewId, userId) => {
   }
 
   return interview;
-};
-
-const createAnswerLookup = (answers = []) => {
-  const answerByQuestionId = new Map();
-  const answerByIndex = new Map();
-
-  answers.forEach((answerItem, index) => {
-    if (typeof answerItem === "string") {
-      answerByIndex.set(index, answerItem);
-      return;
-    }
-
-    if (!answerItem || typeof answerItem !== "object") {
-      return;
-    }
-
-    if (answerItem.questionId) {
-      answerByQuestionId.set(String(answerItem.questionId), answerItem.answer);
-    }
-
-    answerByIndex.set(index, answerItem.answer);
-  });
-
-  return { answerByQuestionId, answerByIndex };
-};
-
-const buildInterviewFeedback = (overallScore) => {
-  if (overallScore >= 80) {
-    return "Strong interview performance. Your answers were detailed and showed practical understanding.";
-  }
-
-  if (overallScore >= 60) {
-    return "Solid interview attempt. Add more examples, tradeoffs, and implementation depth to improve.";
-  }
-
-  if (overallScore >= 35) {
-    return "The interview needs more complete answers. Focus on explaining reasoning and real project experience.";
-  }
-
-  return "The interview submission was too brief. Provide complete answers before submitting.";
 };
 
 const updateUserAnalytics = async (user, overallScore) => {
@@ -108,7 +72,17 @@ export const createInterview = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Tech stack is required");
   }
 
-  const questions = generateQuestions(techStack);
+  const normProjects = normalizeProjects(req.user.projects || []);
+
+  const questions = await generateQuestions({
+    role,
+    skills: techStack,
+    projects: normProjects,
+  });
+
+  if (!questions.length) {
+    throw new ApiError(502, "Could not generate interview questions");
+  }
 
   const interview = await Interview.create({
     user: req.user._id,
@@ -132,6 +106,30 @@ export const getInterviewById = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, interview, "Interview fetched successfully"));
 });
 
+export const getInterviewReports = asyncHandler(async (req, res) => {
+  const interviews = await Interview.find({
+    user: req.user._id,
+    status: "Completed",
+  })
+    .sort({ updatedAt: -1 })
+    .lean();
+
+  const reports = interviews.map(({ questions = [], ...interview }) => ({
+    ...interview,
+    questionCount: questions.length,
+  }));
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { reports },
+        "Interview reports fetched successfully",
+      ),
+    );
+});
+
 export const submitInterview = asyncHandler(async (req, res) => {
   const { interviewId } = req.params;
   const { answers = [], duration = 0 } = req.body;
@@ -140,16 +138,10 @@ export const submitInterview = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Answers must be an array");
   }
 
-  const interview = await findUserInterview(
-    interviewId,
-    req.user._id
-  );
+  const interview = await findUserInterview(interviewId, req.user._id);
 
   if (interview.status === "Completed") {
-    throw new ApiError(
-      400,
-      "Interview has already been submitted"
-    );
+    throw new ApiError(400, "Interview has already been submitted");
   }
 
   // attach answers
@@ -163,48 +155,44 @@ export const submitInterview = asyncHandler(async (req, res) => {
   });
 
   // AI evaluation
-  const analysis = await aiInterviewAnalyser(
-    interview.questions
-  );
+  
+  const analysis = await aiInterviewAnalyser({
+    questions: interview.questions,
+    role: interview.role,
+    skills: interview.techStack,
+    projects: normalizeProjects(req.user.projects || []),
+    experienceLevel: req.user.experienceLevel,
+  });
 
   // update question scores
   interview.questions.forEach((question, index) => {
-    const evaluation =
-      analysis.evaluations?.[index];
+    const evaluation = analysis.evaluations?.[index];
 
     if (!evaluation) return;
 
     question.score = evaluation.score || 0;
-    question.feedback =
-      evaluation.feedback || "";
+    question.feedback = evaluation.feedback || "";
+    question.strength = evaluation.strength || "";
+    question.improvement = evaluation.improvement || "";
   });
 
-  interview.score =
-    analysis.overallScore || 0;
+  interview.score = analysis.overallScore || 0;
 
-  interview.averageScore =
-    analysis.overallScore || 0;
+  interview.averageScore = analysis.overallScore || 0;
 
-  interview.feedback =
-    analysis.feedback || "";
+  interview.feedback = analysis.feedback || "";
 
-  interview.strengths =
-    analysis.strengths || [];
+  interview.strengths = analysis.strengths || [];
 
-  interview.weaknesses =
-    analysis.weaknesses || [];
+  interview.weaknesses = analysis.weaknesses || [];
 
-  interview.duration =
-    Number(duration) || 0;
+  interview.duration = Number(duration) || 0;
 
   interview.status = "Completed";
 
   await interview.save();
 
-  const user = await updateUserAnalytics(
-    req.user,
-    interview.score
-  );
+  const user = await updateUserAnalytics(req.user, interview.score);
 
   return res.status(200).json(
     new ApiResponse(
@@ -213,7 +201,7 @@ export const submitInterview = asyncHandler(async (req, res) => {
         interview,
         user,
       },
-      "Interview submitted successfully"
-    )
+      "Interview submitted successfully",
+    ),
   );
 });

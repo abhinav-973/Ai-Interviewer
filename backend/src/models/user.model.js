@@ -45,6 +45,20 @@ const userSchema = new Schema(
         type: String,
       },
     ],
+    projects: [
+      {
+        name: String,
+        description: String,
+        keyFeatures: [String],
+        technologies: [String],
+        frameworks: [String],
+        languages: [String],
+        databases: [String],
+        github: String,
+        liveDemo: String,
+        duration: String,
+      },
+    ],
 
     targetRole: {
       type: String,

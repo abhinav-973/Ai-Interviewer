@@ -4,6 +4,12 @@ const SYSTEM_PROMPT = `
 You are an ATS-grade resume parser specializing in project extraction.
 
 Extract ALL projects from the resume.
+For each project:
+
+- The description should be a summary derived from the project's bullet points.
+- Do not leave any bullet point.
+- Do not leave description empty if project details are available.
+- Summarize the project's purpose, functionality, and key implementation details.
 
 Rules:
 - Return ONLY valid JSON.
